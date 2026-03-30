@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Running Total Trainer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #000;
+      --panel: #0a0a0a;
+      --panel-2: #111;
+      --text: #fff;
+      --rgb-speed: 4s;
+      --rgb-size: 300% 300%;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: 'Press Start 2P', monospace;
+      text-align: center;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 40px 20px;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    body.screen-shake {
+      animation: screenShake 0.42s cubic-bezier(.36,.07,.19,.97) both;
+    }
+
+    body.glitching {
+      animation: globalGlitch 0.55s steps(2, end) both;
+    }
+
+    body.glitching,
+    body.glitching input,
+    body.glitching button,
+    body.glitching #display,
+    body.glitching #result,
+    body.glitching .stats,
+    body.glitching .timer-row,
+    body.glitching h1,
+    body.glitching .highscore-badge,
+    body.glitching .feedback-box {
+      animation: textGlitch 0.55s steps(2, end) infinite;
+    }
+
+    @keyframes screenShake {
+      10%, 90% { transform: translate3d(-2px, 1px, 0); }
+      20%, 80% { transform: translate3d(4px, -2px, 0); }
+      30%, 50%, 70% { transform: translate3d(-7px, 3px, 0); }
+      40%, 60% { transform: translate3d(7px, -3px, 0); }
+    }
+
+    @keyframes globalGlitch {
+      0%   { filter: blur(0px); }
+      15%  { filter: blur(1px); }
+      30%  { filter: blur(0px); }
+      45%  { filter: blur(1.5px); }
+      60%  { filter: blur(0.4px); }
+      75%  { filter: blur(1px); }
+      100% { filter: blur(0px); }
+    }
+
+    @keyframes textGlitch {
+      0% {
+        color: #fff;
+        text-shadow:
+          0 0 0 #fff,
+          0 0 0 #fff;
+        transform: translate(0, 0) skew(0deg);
+        filter: blur(0px);
+      }
+      10% {
+        color: #000;
+        text-shadow:
+          2px 0 #fff,
+          -2px 0 #000;
+        transform: translate(-1px, 1px) skew(-1deg);
+        filter: blur(0.7px);
+      }
+      20% {
+        color: #fff;
+        text-shadow:
+          -2px 0 #000,
+          2px 0 #fff;
+        transform: translate(2px, -1px) skew(1deg);
+        filter: blur(0px);
+      }
+      30% {
+        color: #000;
+        text-shadow:
+          3px 0 #fff,
+          -3px 0 #000;
+        transform: translate(-2px, 0) skew(-2deg);
+        filter: blur(1px);
+      }
+      40% {
+        color: #fff;
+        text-shadow:
+          -1px 0 #000,
+          1px 0 #fff;
+        transform: translate(1px, 1px) skew(1deg);
+        filter: blur(0.2px);
+      }
+      50% {
+        color: #000;
+        text-shadow:
+          2px 0 #fff,
+          -2px 0 #000;
+        transform: translate(-1px, -1px) skew(-1deg);
+        filter: blur(1.2px);
+      }
+      60% {
+        color: #fff;
+        text-shadow:
+          -3px 0 #000,
+          3px 0 #fff;
+        transform: translate(2px, 0) skew(2deg);
+        filter: blur(0px);
+      }
+      70% {
+        color: #000;
+        text-shadow:
+          1px 0 #fff,
+          -1px 0 #000;
+        transform: translate(0, 1px) skew(-1deg);
+        filter: blur(0.8px);
+      }
+      80% {
+        color: #fff;
+        text-shadow:
+          -2px 0 #000,
+          2px 0 #fff;
+        transform: translate(-1px, 0) skew(1deg);
+        filter: blur(0px);
+      }
+      90% {
+        color: #000;
+        text-shadow:
+          2px 0 #fff,
+          -2px 0 #000;
+        transform: translate(1px, -1px) skew(-1deg);
+        filter: blur(1px);
+      }
+      100% {
+        color: #fff;
+        text-shadow:
+          0 0 0 #fff,
+          0 0 0 #fff;
+        transform: translate(0, 0) skew(0deg);
+        filter: blur(0px);
+      }
+    }
+
+    @keyframes rgbShift {
+      0% { background-position: 0% 50%; }
+      25% { background-position: 50% 100%; }
+      50% { background-position: 100% 50%; }
+      75% { background-position: 50% 0%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .rgb-outline {
+      position: relative;
+      border-radius: 12px;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .rgb-outline::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      padding: 2px;
+      border-radius: inherit;
+      background: linear-gradient(
+        135deg,
+        #ff0000,
+        #ff8800,
+        #ffff00,
+        #00ff00,
+        #00ffff,
+        #0000ff,
+        #ff00ff,
+        #ff0000
+      );
+      background-size: var(--rgb-size);
+      animation: rgbShift var(--rgb-speed) linear infinite;
+      -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .rgb-outline > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .highscore-badge {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: var(--panel-2);
+      padding: 12px;
+      font-size: 0.7rem;
+      z-index: 1000;
+      min-width: 180px;
+    }
+
+    .container {
+      max-width: 650px;
+      margin: 80px auto 0;
+      background: var(--panel);
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 1rem;
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+
+    #display {
+      font-size: 2.5rem;
+      margin: 40px 0 20px;
+      min-height: 80px;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px #fff, 0 0 20px rgba(255,255,255,0.6);
+      line-height: 1.3;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      font-size: 0.7rem;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      line-height: 1.8;
+    }
+
+    .timer-row {
+      margin-bottom: 28px;
+      font-size: 0.7rem;
+      line-height: 1.8;
+    }
+
+    #timer {
+      display: inline-block;
+      min-width: 70px;
+    }
+
+    input, button {
+      font-family: 'Press Start 2P', monospace;
+      padding: 12px;
+      margin: 10px;
+      font-size: 0.7rem;
+      border-radius: 8px;
+      background: #000;
+      color: #fff;
+      border: none;
+      position: relative;
+      z-index: 1;
+    }
+
+    .input-wrap,
+    .button-wrap {
+      display: inline-block;
+      position: relative;
+      border-radius: 10px;
+      padding: 2px;
+      margin: 10px;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .input-wrap::before,
+    .button-wrap::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      padding: 2px;
+      border-radius: inherit;
+      background: linear-gradient(
+        135deg,
+        #ff0000,
+        #ff8800,
+        #ffff00,
+        #00ff00,
+        #00ffff,
+        #0000ff,
+        #ff00ff,
+        #ff0000
+      );
+      background-size: var(--rgb-size);
+      animation: rgbShift var(--rgb-speed) linear infinite;
+      -webkit-mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .input-wrap > *,
+    .button-wrap > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .input-wrap input,
+    .button-wrap button {
+      margin: 0;
+      display: block;
+    }
+
+    input {
+      width: min(320px, 85vw);
+      text-align: center;
+      outline: none;
+    }
+
+    input::placeholder {
+      color: #666;
+    }
+
+    button:hover:not(:disabled) {
+      background: #111;
+      cursor: pointer;
+    }
+
+    button:disabled,
+    input:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    #result {
+      margin-top: 25px;
+      min-height: 24px;
+      font-size: 0.7rem;
+      line-height: 1.8;
+    }
+
+    .feedback-box {
+      margin: 28px auto 0;
+      max-width: 280px;
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 14px;
+      background: var(--panel-2);
+      font-size: 0.55rem;
+      line-height: 1.7;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      pointer-events: none;
+    }
+
+    .feedback-box.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .feedback-box.correct {
+      color: #00ff88;
+    }
+
+    .feedback-box.wrong {
+      color: #ff4d4d;
+    }
+
+    .feedback-box.timeout {
+      color: #ffd24d;
+    }
+
+    #particleLayer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 2000;
+    }
+
+    .particle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      opacity: 1;
+      will-change: transform, opacity;
+      animation: particleFly 650ms ease-out forwards;
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    @keyframes particleFly {
+      from {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+      }
+      to {
+        transform: translate(var(--dx), var(--dy)) scale(0.4) rotate(var(--rot));
+        opacity: 0;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .container {
+        margin-top: 70px;
+        padding: 28px 14px;
+      }
+
+      #display {
+        font-size: 2rem;
+      }
+
+      .stats, .timer-row, #result, .highscore-badge, input, button {
+        font-size: 0.6rem;
+      }
+
+      .feedback-box {
+        font-size: 0.48rem;
+        max-width: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="highscore-badge rgb-outline">
+    <span>HIGH SCORE: <span id="highScoreTop">0</span></span>
+  </div>
+
+  <div class="container rgb-outline">
+    <h1>RUNNING TOTAL TRAINER</h1>
+
+    <div class="stats">
+      <div>STREAK: <span id="streak">0</span></div>
+      <div>HIGH SCORE: <span id="highScore">0</span></div>
+    </div>
+
+    <div class="timer-row">
+      TIME: <span id="timer">6.0</span>
+    </div>
+
+    <div id="display">0</div>
+
+    <div class="button-wrap">
+      <button id="startBtn">START</button>
+    </div>
+
+    <div>
+      <span class="input-wrap">
+        <input id="answer" type="number" placeholder="CURRENT TOTAL" disabled />
+      </span>
+      <span class="button-wrap">
+        <button id="submitBtn" disabled>SUBMIT</button>
+      </span>
+    </div>
+
+    <p id="result"></p>
+
+    <div id="feedbackBox" class="feedback-box rgb-outline"></div>
+  </div>
+
+  <div id="particleLayer"></div>
+
+  <script>
+    let currentTotal = 0;
+    let streak = 0;
+    let waiting = false;
+    let active = false;
+    let feedbackTimeout = null;
+    let glitchTimeout = null;
+    let shakeTimeout = null;
+
+    let highScore = Number(sessionStorage.getItem("highScore")) || 0;
+
+    const TIME_LIMIT_MS = 6000;
+    let timerInterval = null;
+    let stepStartTime = null;
+
+    function updateUI() {
+      document.getElementById("streak").textContent = streak;
+      document.getElementById("highScore").textContent = highScore;
+      document.getElementById("highScoreTop").textContent = highScore;
+    }
+
+    function updateTimerDisplay(msRemaining) {
+      const seconds = Math.max(0, msRemaining) / 1000;
+      document.getElementById("timer").textContent = seconds.toFixed(1);
+    }
+
+    function stopStepTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      stepStartTime = null;
+    }
+
+    function startStepTimer() {
+      stopStepTimer();
+      stepStartTime = Date.now();
+      updateTimerDisplay(TIME_LIMIT_MS);
+
+      timerInterval = setInterval(() => {
+        if (!waiting) {
+          stopStepTimer();
+          return;
+        }
+
+        const elapsed = Date.now() - stepStartTime;
+        const remaining = TIME_LIMIT_MS - elapsed;
+
+        updateTimerDisplay(remaining);
+
+        if (remaining <= 0) {
+          handleTimeout();
+        }
+      }, 50);
+    }
+
+    function showFeedback(message, type) {
+      const box = document.getElementById("feedbackBox");
+
+      if (feedbackTimeout) {
+        clearTimeout(feedbackTimeout);
+      }
+
+      box.textContent = message;
+      box.className = `feedback-box rgb-outline ${type} show`;
+
+      feedbackTimeout = setTimeout(() => {
+        box.className = "feedback-box rgb-outline";
+        box.textContent = "";
+      }, 900);
+    }
+
+    function triggerFontGlitch() {
+      document.body.classList.remove("glitching");
+      void document.body.offsetWidth;
+      document.body.classList.add("glitching");
+
+      if (glitchTimeout) {
+        clearTimeout(glitchTimeout);
+      }
+
+      glitchTimeout = setTimeout(() => {
+        document.body.classList.remove("glitching");
+      }, 560);
+    }
+
+    function triggerFailExplosion() {
+      const layer = document.getElementById("particleLayer");
+      const colors = ["#ff3b3b", "#ff6b00", "#ffd93b", "#ffffff", "#ff00ff"];
+      const particleCount = 34;
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+
+      document.body.classList.remove("screen-shake");
+      void document.body.offsetWidth;
+      document.body.classList.add("screen-shake");
+
+      if (shakeTimeout) {
+        clearTimeout(shakeTimeout);
+      }
+
+      shakeTimeout = setTimeout(() => {
+        document.body.classList.remove("screen-shake");
+      }, 450);
+
+      triggerFontGlitch();
+
+      for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement("div");
+        particle.className = "particle";
+
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 80 + Math.random() * 220;
+        const dx = Math.cos(angle) * distance;
+        const dy = Math.sin(angle) * distance;
+        const size = 5 + Math.random() * 8;
+        const rot = (-180 + Math.random() * 360).toFixed(0) + "deg";
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        particle.style.left = `${centerX}px`;
+        particle.style.top = `${centerY}px`;
+        particle.style.width = `${size}px`;
+        particle.style.height = `${size}px`;
+        particle.style.background = color;
+        particle.style.color = color;
+        particle.style.setProperty("--dx", `${dx}px`);
+        particle.style.setProperty("--dy", `${dy}px`);
+        particle.style.setProperty("--rot", rot);
+
+        layer.appendChild(particle);
+
+        particle.addEventListener("animationend", () => {
+          particle.remove();
+        });
+      }
+    }
+
+    function resetGame() {
+      stopStepTimer();
+
+      currentTotal = 0;
+      active = true;
+      waiting = false;
+
+      document.getElementById("display").textContent = "0";
+      document.getElementById("answer").value = "";
+      document.getElementById("answer").disabled = true;
+      document.getElementById("submitBtn").disabled = true;
+      document.getElementById("result").textContent = " ";
+      document.getElementById("startBtn").style.display = "inline-block";
+
+      updateTimerDisplay(TIME_LIMIT_MS);
+      updateUI();
+    }
+
+    function endRun(message, feedbackMessage, feedbackType) {
+      stopStepTimer();
+
+      triggerFailExplosion();
+
+      streak = 0;
+      active = false;
+      waiting = false;
+
+      document.getElementById("display").textContent = "0";
+      document.getElementById("result").textContent = message;
+      document.getElementById("answer").value = "";
+      document.getElementById("answer").disabled = true;
+      document.getElementById("submitBtn").disabled = true;
+      document.getElementById("startBtn").style.display = "inline-block";
+
+      updateTimerDisplay(TIME_LIMIT_MS);
+      showFeedback(feedbackMessage, feedbackType);
+      updateUI();
+    }
+
+    function handleTimeout() {
+      if (!waiting) return;
+      endRun("TIME OUT. RESET TO 0.", "TOO SLOW!", "timeout");
+    }
+
+    function generateOperation() {
+      let value = Math.floor(Math.random() * 9) + 1;
+      let op;
+
+      if (currentTotal === 0) {
+        op = "+";
+      } else if (currentTotal === 20) {
+        op = "-";
+      } else {
+        op = Math.random() < 0.5 ? "+" : "-";
+      }
+
+      if (op === "+" && currentTotal + value > 20) {
+        value = 20 - currentTotal;
+      }
+
+      if (op === "-" && currentTotal - value < 0) {
+        value = currentTotal;
+      }
+
+      return { op, value };
+    }
+
+    function nextStep() {
+      const { op, value } = generateOperation();
+
+      currentTotal = op === "+" ? currentTotal + value : currentTotal - value;
+      waiting = true;
+
+      document.getElementById("display").textContent = op + value;
+      document.getElementById("answer").value = "";
+      document.getElementById("answer").disabled = false;
+      document.getElementById("submitBtn").disabled = false;
+      document.getElementById("answer").focus();
+      document.getElementById("result").textContent = " ";
+
+      startStepTimer();
+      updateUI();
+    }
+
+    function checkAnswer() {
+      if (!waiting) return;
+
+      const user = parseInt(document.getElementById("answer").value, 10);
+      if (isNaN(user)) return;
+
+      if (user === currentTotal) {
+        stopStepTimer();
+
+        streak++;
+
+        if (streak > highScore) {
+          highScore = streak;
+          sessionStorage.setItem("highScore", highScore);
+        }
+
+        showFeedback("CORRECT!", "correct");
+        document.getElementById("result").textContent = "CORRECT";
+        document.getElementById("display").textContent = user;
+        document.getElementById("answer").value = "";
+        document.getElementById("answer").disabled = true;
+        document.getElementById("submitBtn").disabled = true;
+        waiting = false;
+
+        updateTimerDisplay(TIME_LIMIT_MS);
+        updateUI();
+
+        setTimeout(() => {
+          if (active && !waiting) {
+            nextStep();
+          }
+        }, 350);
+
+      } else {
+        endRun("WRONG. RESET TO 0.", "WRONG!", "wrong");
+      }
+    }
+
+    document.getElementById("startBtn").onclick = function () {
+      if (!active) {
+        resetGame();
+        document.getElementById("startBtn").style.display = "none";
+        nextStep();
+      }
+    };
+
+    document.getElementById("submitBtn").onclick = checkAnswer;
+
+    document.getElementById("answer").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        checkAnswer();
+      }
+    });
+
+    updateUI();
+    updateTimerDisplay(TIME_LIMIT_MS);
+  </script>
+
+</body>
+</html>
